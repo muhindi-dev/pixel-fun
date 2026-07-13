@@ -2,7 +2,15 @@ const CACHE = "pixel-colour-fun-v1";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./favicon.svg", "./apple-touch-icon.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(CORE)).then(() => self.skipWaiting()));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await cache.addAll(CORE);
+    const indexResponse = await fetch("./index.html", { cache: "reload" });
+    const indexHtml = await indexResponse.text();
+    const builtAssets = [...indexHtml.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)].map((match) => match[1]);
+    if (builtAssets.length) await cache.addAll(builtAssets);
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (event) => {
