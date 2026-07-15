@@ -295,7 +295,7 @@ export default function Home() {
 
     {!game ? <div className="home">
       <header>
-        <div className="brand"><Logo/><h1>Shay &amp; Zay <span>Pixel Fun</span></h1></div>
+        <div className="brand"><Logo/><div className="brand-copy"><h1>Shay &amp; Zay <span>Pixel Fun</span></h1><small>Create · Colour · Play</small></div></div>
         <button className="privacy" onClick={() => setPrivacy(true)}><b>🛡️</b><span><strong>Private &amp; safe</strong><small>Photos stay on this iPad</small></span></button>
       </header>
       <section className="hero">
@@ -305,7 +305,7 @@ export default function Home() {
           <p>Turn any photo into a colour-by-number adventure.</p>
           <button className="take" onClick={() => camera.current?.click()}>📷 <span>Take a Photo</span></button>
           <button className="choose" onClick={() => photos.current?.click()}>🖼️ <span>Choose a Photo</span></button>
-          <div className="hero-chips"><span>⚡ Works offline</span><span>🚫 No ads</span><span>🔒 Photos stay here</span></div>
+          <div className="hero-chips"><span><b/>Offline ready</span><span><b/>Always ad-free</span><span><b/>On-device privacy</span></div>
         </div>
         <div className="demo">
           <h3><span>LIVE PREVIEW</span> Your picture becomes pixel art</h3>
@@ -326,7 +326,7 @@ export default function Home() {
     </div> : <div className="game">
       <header className="game-head">
         <button className="back" onClick={newPicture} aria-label="Back">‹</button>
-        <div className="mini-brand"><Logo/><strong>Shay &amp; Zay <span>Pixel Fun</span></strong></div>
+        <div className="mini-brand"><Logo/><span className="mini-copy"><strong>Shay &amp; Zay <span>Pixel Fun</span></strong><small>Creative studio</small></span></div>
         <div className="progress"><span><b>{progress}%</b> {progress === 100 ? "Amazing!" : "Keep colouring!"}</span><i><b style={{ width: `${progress}%` }}/></i></div>
         <button className="new" onClick={() => camera.current?.click()}>📷 <span>New photo</span></button>
       </header>
@@ -341,7 +341,7 @@ export default function Home() {
             <div className="brush-control"><span>🖌️ Brush</span>{[1, 3, 5].map((size) => <button key={size} className={brushSize === size ? "active" : ""} onClick={() => setBrushSize(size)}>{size}×</button>)}</div>
             <div className="zoom-control"><button className="fit" disabled={zoom === 1} onClick={fitBoard}>Fit</button><button disabled={zoom <= 1} onClick={() => setBoardZoom(zoom - .5)}>−</button><span>{Math.round(zoom * 100)}%</span><button disabled={zoom >= 5} onClick={() => setBoardZoom(zoom + .5)}>+</button></div>
           </div>
-          <div ref={viewport} className="grid-scroll"><span className="gesture-hint">Drag to colour · Pinch to zoom</span><div ref={grid} className="pixel-grid" style={{ "--size": game.size, width: fitSize * zoom, height: fitSize * zoom, minWidth: fitSize * zoom, minHeight: fitSize * zoom } as CSSProperties}
+          <div ref={viewport} className="grid-scroll"><span className="gesture-hint">Drag to colour · Pinch to explore</span><div ref={grid} className="pixel-grid" style={{ "--size": game.size, width: fitSize * zoom, height: fitSize * zoom, minWidth: fitSize * zoom, minHeight: fitSize * zoom } as CSSProperties}
             onPointerDown={pointerDown}
             onPointerMove={pointerMove}
             onPointerUp={pointerEnd}
@@ -357,12 +357,12 @@ export default function Home() {
       <div className="preview"><img src={preview} alt="Chosen photo" /></div>
       <div className="levels"><p className="eyebrow">Choose your challenge</p><h2>How detailed?</h2><p>More pixels and colours make the finished picture look closer to your photo.</p>
         {LEVELS.map((level, i) => <button key={level.size} className={i === 1 ? "recommended" : i === 3 ? "ultra" : ""} disabled={loading} onClick={() => begin(level)}><i>{level.icon}</i><span><b>{level.name}</b><small>{level.sub}</small></span><span className="level-spec"><b>{level.size}×{level.size}</b><small>pixels</small></span>{i === 1 && <em>POPULAR</em>}{i === 3 && <em>MAX DETAIL</em>}<strong>›</strong></button>)}
-        {loading && <div className="loading"><i/> Making pixel magic…</div>}
+        {loading && <div className="loading"><i/> Building your pixel world…</div>}
       </div>
     </section></div>}
 
     {privacy && <div className="overlay"><section className="info"><i>🛡️</i><h2>Made to be safe</h2><p>Photos are changed into pixel art right here on this iPad. They are not uploaded or shared.</p><div><span>✓ No accounts</span><span>✓ No ads</span><span>✓ No public gallery</span></div><button onClick={() => setPrivacy(false)}>Got it!</button></section></div>}
 
-    {celebrate && game && <div className="overlay celebration"><div className="confetti">{Array.from({ length: 28 }, (_, i) => <i key={i} style={{ "--i": i } as CSSProperties}/>)}</div><section className="complete"><i>⭐</i><p className="eyebrow">Pixel perfect!</p><h2>You made amazing art!</h2><div className="mini-grid" style={{ "--size": game.size } as CSSProperties}>{game.cells.map((c, i) => <i key={i} style={{ background: game.colours[c] }}/>)}</div><div><button onClick={savePicture}>⬇️ Save Picture</button><button onClick={newPicture}>📷 Make Another</button></div></section></div>}
+    {celebrate && game && <div className="overlay celebration"><div className="confetti">{Array.from({ length: 28 }, (_, i) => <i key={i} style={{ "--i": i } as CSSProperties}/>)}</div><section className="complete"><div className="completion-mark" aria-hidden="true"><i>✦</i><span/><span/><span/></div><p className="eyebrow">Masterpiece complete</p><h2>That looks incredible.</h2><p className="complete-caption">Made pixel by pixel in your creative studio.</p><div className="mini-grid" style={{ "--size": game.size } as CSSProperties}>{game.cells.map((c, i) => <i key={i} style={{ background: game.colours[c] }}/>)}</div><div><button onClick={savePicture}>↓ Save Picture</button><button onClick={newPicture}>＋ Create Another</button></div></section></div>}
   </main>;
 }
