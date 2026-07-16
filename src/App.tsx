@@ -7,6 +7,40 @@ type RGB = [number, number, number];
 type Lab = [number, number, number];
 type Game = { size: number; cells: number[]; colours: string[]; totals: number[] };
 type Level = { name: string; sub: string; size: number; colours: number; icon: string };
+type SavedGame = {
+  id: string;
+  title: string;
+  updatedAt: number;
+  game: Game;
+  filled: boolean[];
+  selected: number;
+  brushSize: number;
+  thumbnail: string;
+};
+
+const SAVES_KEY = "shay-zay-pixel-saves-v1";
+const MAX_SAVES = 5;
+
+function loadSavedGames(): SavedGame[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SAVES_KEY) ?? "[]") as SavedGame[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((save) => save?.id && save.game?.cells?.length === save.filled?.length).slice(0, MAX_SAVES);
+  } catch { return []; }
+}
+
+function makeThumbnail(game: Game) {
+  const canvas = document.createElement("canvas");
+  const pixel = Math.max(1, Math.floor(180 / game.size));
+  canvas.width = canvas.height = pixel * game.size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+  game.cells.forEach((colour, index) => {
+    ctx.fillStyle = game.colours[colour];
+    ctx.fillRect(index % game.size * pixel, Math.floor(index / game.size) * pixel, pixel, pixel);
+  });
+  return canvas.toDataURL("image/png");
+}
 
 const LEVELS: Level[] = [
   { name: "Big pixels", sub: "Quick & easy · 10 colours", size: 18, colours: 10, icon: "●" },
@@ -181,6 +215,7 @@ export default function Home() {
   const filledCountRef = useRef(0);
   const remainingCountRef = useRef<number[]>([]);
   const filledSyncTimer = useRef<number | null>(null);
+  const saveNoticeTimer = useRef<number | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const [filled, setFilled] = useState<boolean[]>([]);
   const [selected, setSelected] = useState(0);
@@ -193,6 +228,9 @@ export default function Home() {
   const [zoom, setZoom] = useState(1);
   const [fitSize, setFitSize] = useState(480);
   const [brushSize, setBrushSize] = useState(1);
+  const [savedGames, setSavedGames] = useState<SavedGame[]>(loadSavedGames);
+  const [currentSaveId, setCurrentSaveId] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState("");
 
   useEffect(() => {
     if (!game || !viewport.current) return;
@@ -206,6 +244,7 @@ export default function Home() {
 
   useEffect(() => () => {
     if (filledSyncTimer.current !== null) window.clearTimeout(filledSyncTimer.current);
+    if (saveNoticeTimer.current !== null) window.clearTimeout(saveNoticeTimer.current);
   }, []);
 
   const stats = useMemo(() => {
@@ -222,6 +261,102 @@ export default function Home() {
   const progress = game ? Math.round(stats.done / game.cells.length * 100) : 0;
   const remaining = stats.remaining;
   const activateCell = useCallback((index: number) => colourCellRef.current(index), []);
+
+  function showSaveMessage(message: string) {
+    setSaveNotice(message);
+    if (saveNoticeTimer.current !== null) window.clearTimeout(saveNoticeTimer.current);
+    saveNoticeTimer.current = window.setTimeout(() => setSaveNotice(""), 2600);
+  }
+
+  function persistSaves(next: SavedGame[]) {
+    try {
+      localStorage.setItem(SAVES_KEY, JSON.stringify(next));
+      setSavedGames(next);
+      return true;
+    } catch {
+      showSaveMessage("This iPad couldn't save right now.");
+      return false;
+    }
+  }
+
+  function snapshot(id: string, title: string, thumbnail: string): SavedGame | null {
+    if (!game) return null;
+    return {
+      id, title, thumbnail, updatedAt: Date.now(), selected, brushSize,
+      game: { size: game.size, cells: [...game.cells], colours: [...game.colours], totals: [...game.totals] },
+      filled: [...filledRef.current],
+    };
+  }
+
+  function saveProgress(showMessage = true) {
+    if (!game) return false;
+    const existing = currentSaveId ? savedGames.find((save) => save.id === currentSaveId) : undefined;
+    if (!existing && savedGames.length >= MAX_SAVES) {
+      showSaveMessage("All 5 save slots are full. Delete one to save this picture.");
+      return false;
+    }
+    const id = existing?.id ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    const usedTitles = new Set(savedGames.map((save) => save.title));
+    let slot = 1;
+    while (usedTitles.has(`Pixel Picture ${slot}`) && slot <= MAX_SAVES) slot += 1;
+    const title = existing?.title ?? `Pixel Picture ${slot}`;
+    const saved = snapshot(id, title, existing?.thumbnail || makeThumbnail(game));
+    if (!saved) return false;
+    const next = existing
+      ? savedGames.map((item) => item.id === id ? saved : item)
+      : [saved, ...savedGames];
+    if (!persistSaves(next)) return false;
+    setCurrentSaveId(id);
+    if (showMessage) showSaveMessage(existing ? "Progress saved" : `${title} saved`);
+    return true;
+  }
+
+  function resumeSaved(save: SavedGame) {
+    if (filledSyncTimer.current !== null) window.clearTimeout(filledSyncTimer.current);
+    const restored = [...save.filled];
+    const remainingCounts = [...save.game.totals];
+    let filledCount = 0;
+    restored.forEach((yes, index) => {
+      if (!yes) return;
+      filledCount += 1;
+      remainingCounts[save.game.cells[index]] -= 1;
+    });
+    const selectedColour = remainingCounts[save.selected] > 0
+      ? save.selected
+      : Math.max(0, remainingCounts.findIndex((count) => count > 0));
+    filledSyncTimer.current = null;
+    filledRef.current = restored;
+    filledCountRef.current = filledCount;
+    remainingCountRef.current = remainingCounts;
+    setGame(save.game); setFilled(restored); setSelected(selectedColour); setBrushSize(save.brushSize || 1);
+    setCurrentSaveId(save.id); setCelebrate(false); setPhotoError("");
+    zoomRef.current = 1; setZoom(1);
+  }
+
+  function deleteSaved(save: SavedGame) {
+    if (!window.confirm(`Delete ${save.title}? This cannot be undone.`)) return;
+    const next = savedGames.filter((item) => item.id !== save.id);
+    if (persistSaves(next)) {
+      if (currentSaveId === save.id) setCurrentSaveId(null);
+      showSaveMessage(`${save.title} deleted`);
+    }
+  }
+
+  useEffect(() => {
+    if (!currentSaveId || !game || filled.length !== game.cells.length) return;
+    const timer = window.setTimeout(() => {
+      setSavedGames((current) => {
+        const existing = current.find((save) => save.id === currentSaveId);
+        if (!existing) return current;
+        const saved = snapshot(existing.id, existing.title, existing.thumbnail);
+        if (!saved) return current;
+        const next = current.map((item) => item.id === existing.id ? saved : item);
+        try { localStorage.setItem(SAVES_KEY, JSON.stringify(next)); } catch { return current; }
+        return next;
+      });
+    }, 320);
+    return () => window.clearTimeout(timer);
+  }, [brushSize, currentSaveId, filled, game, selected]);
 
   function acceptPhoto(file?: File) {
     if (!file) return;
@@ -248,6 +383,10 @@ export default function Home() {
 
   async function begin(level: Level) {
     if (!pending) return;
+    if (game && filledCountRef.current > 0 && filledCountRef.current < game.cells.length && !currentSaveId) {
+      if (!window.confirm("Replace this unsaved picture? Tap Cancel, then Save Progress if you want to keep it.")) return;
+    }
+    if (game && currentSaveId && !saveProgress(false)) return;
     setLoading(true);
     try {
       const next = await photoToGame(pending, level);
@@ -256,6 +395,7 @@ export default function Home() {
       filledCountRef.current = 0;
       remainingCountRef.current = [...next.totals];
       setGame(next); setFilled(empty); setSelected(0); setBrushSize(1);
+      setCurrentSaveId(null);
       zoomRef.current = 1; setZoom(1);
       URL.revokeObjectURL(preview); setPreview(""); setPending(null);
     } catch {
@@ -413,9 +553,13 @@ export default function Home() {
   }
 
   function newPicture() {
+    if (game && filledCountRef.current > 0 && filledCountRef.current < game.cells.length && !currentSaveId) {
+      if (!window.confirm("Leave this unsaved picture? Tap Cancel, then Save Progress if you want to keep it.")) return;
+    }
+    if (game && currentSaveId && !saveProgress(false)) return;
     if (filledSyncTimer.current !== null) window.clearTimeout(filledSyncTimer.current);
     filledSyncTimer.current = null; filledRef.current = []; filledCountRef.current = 0; remainingCountRef.current = [];
-    setGame(null); setFilled([]); setCelebrate(false); setPending(null); setPreview(""); setPhotoError(""); pointers.current.clear();
+    setGame(null); setFilled([]); setCelebrate(false); setPending(null); setPreview(""); setPhotoError(""); setCurrentSaveId(null); pointers.current.clear();
   }
 
   function savePicture() {
@@ -462,11 +606,23 @@ export default function Home() {
         <article><b>2</b><i>🔢</i><div><h3>Pick a size</h3><p>Big or small pixels</p></div></article>
         <article><b>3</b><i>🖍️</i><div><h3>Colour it in</h3><p>Match the numbers</p></div></article>
       </section>
+      <section className="saved-library">
+        <div className="saved-heading"><div><p className="eyebrow"><span>◆</span> Your game saves</p><h2>Saved pictures</h2><p>Pick up exactly where you stopped.</p></div><b>{savedGames.length} / {MAX_SAVES} slots</b></div>
+        {savedGames.length ? <div className="saved-grid">{savedGames.map((save) => {
+          const savedProgress = Math.round(save.filled.filter(Boolean).length / save.game.cells.length * 100);
+          return <article key={save.id} className={savedProgress === 100 ? "complete-save" : ""}>
+            <img src={save.thumbnail} alt="Saved pixel picture" />
+            <div className="saved-copy"><span>{savedProgress === 100 ? "Complete" : `${savedProgress}% coloured`}</span><h3>{save.title}</h3><small>Saved {new Date(save.updatedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</small><i><b style={{ width: `${savedProgress}%` }}/></i></div>
+            <div className="saved-actions"><button onClick={() => resumeSaved(save)}>Resume</button><button onClick={() => deleteSaved(save)} aria-label={`Delete ${save.title}`}>Delete</button></div>
+          </article>;
+        })}</div> : <div className="empty-saves"><i>◇</i><div><h3>No saved pictures yet</h3><p>Start colouring, then tap <b>Save Progress</b>. Your five save slots stay private on this iPad.</p></div></div>}
+      </section>
     </div> : <div className="game">
       <header className="game-head">
         <button className="back" onClick={newPicture} aria-label="Back">‹</button>
         <div className="mini-brand"><Logo/><span className="mini-copy"><strong>Shay &amp; Zay <span>Pixel Fun</span></strong><small>Creative studio</small></span></div>
         <div className="progress"><span><b>{progress}%</b> {progress === 100 ? "Amazing!" : "Keep colouring!"}</span><i><b style={{ width: `${progress}%` }}/></i></div>
+        <button className={`save-game ${currentSaveId ? "saved" : ""}`} onClick={() => saveProgress()}><b>{currentSaveId ? "✓" : "↓"}</b><span>{currentSaveId ? "Saved game" : "Save progress"}</span></button>
         <button className="new" onClick={() => openPicker(camera.current)}>📷 <span>New photo</span></button>
       </header>
       <section className="play">
@@ -502,6 +658,8 @@ export default function Home() {
     </section></div>}
 
     {privacy && <div className="overlay"><section className="info"><i>🛡️</i><h2>Made to be safe</h2><p>Photos are changed into pixel art right here on this iPad. They are not uploaded or shared.</p><div><span>✓ No accounts</span><span>✓ No ads</span><span>✓ No public gallery</span></div><button onClick={() => setPrivacy(false)}>Got it!</button></section></div>}
+
+    {saveNotice && <div className="save-toast" role="status">{saveNotice}</div>}
 
     {celebrate && game && <div className="overlay celebration"><div className="confetti">{Array.from({ length: 28 }, (_, i) => <i key={i} style={{ "--i": i } as CSSProperties}/>)}</div><section className="complete"><div className="completion-mark" aria-hidden="true"><i>✦</i><span/><span/><span/></div><p className="eyebrow">Masterpiece complete</p><h2>That looks incredible.</h2><p className="complete-caption">Made pixel by pixel in your creative studio.</p><div className="mini-grid" style={{ "--size": game.size } as CSSProperties}>{game.cells.map((c, i) => <i key={i} style={{ background: game.colours[c] }}/>)}</div><div><button onClick={savePicture}>↓ Save Picture</button><button onClick={newPicture}>＋ Create Another</button></div></section></div>}
   </main>;
