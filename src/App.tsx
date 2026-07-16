@@ -29,7 +29,7 @@ const MAX_SAVES = 5;
 const COMPLETED_DB = "shay-zay-pixel-library";
 const COMPLETED_STORE = "completed-pictures";
 const MAX_COMPLETED = 10;
-const APP_VERSION = "v11 TEST";
+const APP_VERSION = "v11";
 
 function loadSavedGames(): SavedGame[] {
   try {
