@@ -224,6 +224,10 @@ button:focus-visible { outline:4px solid var(--cyan); outline-offset:3px; }
 .preview { min-height:570px; padding:35px; display:grid; place-items:center; border-radius:39px 0 0 39px; background:radial-gradient(circle at 50% 30%,#645af3,#282258 70%); }
 .preview img { width:100%; aspect-ratio:1; object-fit:cover; border:8px solid white; border-radius:31px; rotate:-2deg; box-shadow:0 20px 45px rgba(8,8,41,.38); animation:previewReveal .7s cubic-bezier(.16,1,.3,1) .12s both; }
 .levels { padding:38px 34px 27px; }
+.mode-switch { margin:0 48px 22px 0; padding:5px; display:grid; grid-template-columns:1fr 1fr; gap:5px; border:1px solid #dfdff0; border-radius:19px; background:#ececf7; }
+.mode-switch button { min-height:50px; padding:7px 10px; border:0; border-radius:14px; display:flex; align-items:center; justify-content:center; gap:8px; color:#6f7290; background:transparent; font-size:13px; font-weight:900; }
+.mode-switch button span { font-size:19px; }
+.mode-switch button.active { color:#fff; background:linear-gradient(135deg,var(--violet),var(--purple)); box-shadow:0 5px 13px rgba(73,50,184,.28); }
 .levels .eyebrow { color:var(--violet); }
 .levels h2 { margin:0; font-size:42px; letter-spacing:-.045em; }
 .levels>p:not(.eyebrow) { margin:8px 0 18px; color:var(--muted); font-size:14px; line-height:1.45; }
@@ -240,6 +244,9 @@ button:focus-visible { outline:4px solid var(--cyan); outline-offset:3px; }
 .levels>button:active { transform:scale(.985); }
 .levels>button.recommended { border-color:#9ed526; background:linear-gradient(100deg,#f7ffdf,#fff); box-shadow:0 6px 0 #b3d65e; }
 .levels>button.ultra { border-color:#7657ed; background:linear-gradient(100deg,#f0edff,#fff); box-shadow:0 6px 0 #b3a6f4; }
+.levels>button.jigsaw-level { border-color:#c9c4ec; background:linear-gradient(100deg,#f5f2ff,#fff); }
+.levels>button.jigsaw-level.recommended { border-color:#28c6d9; background:linear-gradient(100deg,#e7fcff,#fff); box-shadow:0 6px 0 #8cdde5; }
+.levels>button.jigsaw-level.ultra { border-color:#7657ed; background:linear-gradient(100deg,#eeeaff,#fff); box-shadow:0 6px 0 #b3a6f4; }
 .levels button>i { width:52px; height:52px; flex:0 0 52px; display:grid; place-items:center; border-radius:17px; background:linear-gradient(145deg,#e1faff,#ece8ff); color:var(--violet); font-size:25px; font-style:normal; }
 .levels button span b,.levels button span small { display:block; }
 .levels button span b { font-size:18px; }
@@ -325,6 +332,29 @@ button:focus-visible { outline:4px solid var(--cyan); outline-offset:3px; }
 .complete>div:last-child button:first-child { color:#152052; background:linear-gradient(135deg,#d8ff66,#ffd34d); box-shadow:0 7px 0 #9c9f27; }
 .complete .eyebrow { margin-top:15px; color:var(--violet); }
 .complete-caption { margin:0 auto 12px; color:var(--muted); font-size:14px; }
+.complete-jigsaw-image { width:min(330px,65vw); aspect-ratio:1; margin:18px auto; display:block; object-fit:cover; border:7px solid white; outline:3px solid #a68bf9; border-radius:23px; box-shadow:0 12px 30px rgba(41,22,101,.22); }
+
+/* Jigsaw studio */
+.jigsaw-game { background:radial-gradient(circle at 92% 8%,rgba(255,211,77,.18),transparent 28%),linear-gradient(145deg,#f8f9ff,#eeefff); }
+.jigsaw-head { flex:0 0 auto; }
+.jigsaw-progress { min-width:170px; margin-left:auto; }
+.jigsaw-progress>span { display:block; color:var(--muted); font-size:11px; font-weight:800; }
+.jigsaw-progress>span b { color:var(--ink); font-size:19px; }
+.jigsaw-progress>i { height:9px; margin-top:5px; display:block; overflow:hidden; border-radius:99px; background:#e7e5f4; }
+.jigsaw-progress>i b { height:100%; display:block; border-radius:inherit; background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink)); transition:width .25s ease; }
+.jigsaw-play { flex:1; min-height:0; padding-top:11px; display:flex; flex-direction:column; gap:9px; }
+.jigsaw-toolbar { min-height:64px; padding:8px 12px 8px 19px; display:flex; align-items:center; justify-content:space-between; gap:14px; border:1px solid rgba(47,40,111,.1); border-radius:22px; background:#fff; box-shadow:0 8px 22px rgba(31,27,83,.07); }
+.jigsaw-toolbar>div { min-width:0; display:flex; align-items:baseline; gap:10px; }
+.jigsaw-toolbar strong { font-size:18px; }
+.jigsaw-toolbar small { color:var(--muted); font-size:11px; font-weight:700; }
+.jigsaw-toolbar>button { min-height:46px; padding:5px 13px; border:1px solid #dddced; border-radius:16px; display:grid; grid-template-columns:auto auto; grid-template-rows:auto auto; align-items:center; gap:0 7px; color:#626681; background:#f4f4fb; text-align:left; }
+.jigsaw-toolbar>button span { grid-row:1/3; font-size:21px; }
+.jigsaw-toolbar>button b { font-size:11px; }
+.jigsaw-toolbar>button small { font-size:9px; }
+.jigsaw-toolbar>button.active { color:#4935ad; border-color:#b8acf0; background:#efebff; }
+.jigsaw-stage { flex:1; min-height:0; overflow:hidden; position:relative; border:1px solid rgba(47,40,111,.1); border-radius:25px; background:#eef1ff; box-shadow:0 12px 30px rgba(31,27,83,.1); }
+.jigsaw-canvas { width:100%; height:100%; display:block; touch-action:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+.jigsaw-save-card .saved-copy>span { color:#24658b; background:#e7f7ff; }
 .completion-mark { width:92px; height:92px; margin:0 auto; display:grid; place-items:center; position:relative; border-radius:31px; color:white; background:linear-gradient(145deg,var(--cyan),var(--violet) 48%,var(--pink)); box-shadow:0 18px 40px rgba(93,66,222,.28); animation:completionPop .75s cubic-bezier(.16,1.3,.3,1) .12s both; }
 .completion-mark>i { font-size:43px; font-style:normal; text-shadow:0 0 18px rgba(255,255,255,.7); animation:starTurn 8s linear infinite; }
 .completion-mark>span { position:absolute; left:calc(50% - 4.5px); top:calc(50% - 4.5px); width:9px; height:9px; border-radius:50%; background:var(--sun); box-shadow:0 0 12px var(--sun); animation:orbitSpark 3.2s linear infinite; }
@@ -387,6 +417,7 @@ button:focus-visible { outline:4px solid var(--cyan); outline-offset:3px; }
   .preview { min-height:235px; padding:25px; border-radius:39px 39px 0 0; }
   .preview img { width:min(270px,55vw); }
   .levels { padding:27px 30px 25px; }
+  .mode-switch { margin-right:46px; }
   .play { grid-template-columns:1fr; grid-template-rows:auto 1fr; }
   .play aside { min-height:98px; padding:9px; }
   .play aside h2 { display:none; }
@@ -394,6 +425,7 @@ button:focus-visible { outline:4px solid var(--cyan); outline-offset:3px; }
   .palette button { min-height:73px; justify-content:center; }
   .palette button span { display:none; }
   .gesture-hint { top:8px; }
+  .jigsaw-toolbar>div small { display:none; }
 }
 
 @media (max-width:650px) {
@@ -430,6 +462,8 @@ button:focus-visible { outline:4px solid var(--cyan); outline-offset:3px; }
   .completed-grid article>img { border-radius:14px; }
   .completed-actions { grid-template-columns:1fr; }
   .levels { padding:26px 16px 22px; }
+  .mode-switch { margin:0 45px 18px 0; }
+  .mode-switch button { padding:6px; font-size:11px; }
   .levels h2 { font-size:32px; }
   .levels button em { display:none; }
   .levels button .level-spec { display:none; }
@@ -437,6 +471,14 @@ button:focus-visible { outline:4px solid var(--cyan); outline-offset:3px; }
   .board-top { justify-content:center; }
   .board-top p { width:100%; justify-content:center; }
   .brush-control>span,.mission-label { display:none; }
+  .jigsaw-progress { min-width:92px; }
+  .jigsaw-progress>span { font-size:9px; }
+  .jigsaw-progress>span b { font-size:15px; }
+  .jigsaw-toolbar { min-height:55px; padding:7px 9px; }
+  .jigsaw-toolbar>div { display:block; }
+  .jigsaw-toolbar strong { font-size:14px; }
+  .jigsaw-toolbar>button { min-height:40px; padding:4px 8px; }
+  .jigsaw-toolbar>button b { font-size:9px; }
 }
 
 @media (max-height:760px) and (min-width:901px) {
