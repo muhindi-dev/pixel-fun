@@ -38,7 +38,7 @@ const COMPLETED_DB = "shay-zay-pixel-library";
 const COMPLETED_STORE = "completed-pictures";
 const JIGSAW_STORE = "jigsaw-saves";
 const MAX_COMPLETED = 10;
-const APP_VERSION = "v12.1 TEST";
+const APP_VERSION = "v12.1";
 
 function loadSavedGames(): SavedGame[] {
   try {
@@ -911,7 +911,7 @@ export default function Home() {
 
     {puzzle ? <JigsawGame puzzle={puzzle} version={APP_VERSION} onChange={setPuzzle} onBack={() => void leaveJigsaw()} onSave={() => void saveJigsawProgress()} onNewPhoto={() => openPicker(camera.current)} onComplete={() => setCelebrate(true)}/> : !game ? <div className="home">
       <header>
-        <div className="brand"><Logo/><div className="brand-copy"><h1>Shay &amp; Zay <span>Pixel Fun</span></h1><small>Create · Colour · Play</small></div></div>
+        <div className="brand"><Logo/><div className="brand-copy"><h1>Shay &amp; Zay <span>PlayLab</span></h1><small>Create · Colour · Puzzle · Play</small></div></div>
         <div className="header-actions"><button className="privacy" onClick={() => setPrivacy(true)}><b>🛡️</b><span><strong>Private &amp; safe</strong><small>Photos stay on this iPad</small></span></button><span className="app-version">{APP_VERSION}</span></div>
       </header>
       <section className="hero">
@@ -976,7 +976,7 @@ export default function Home() {
     </div> : <div className="game">
       <header className="game-head">
         <button className="back" onClick={newPicture} aria-label="Back">‹</button>
-        <div className="mini-brand"><Logo/><span className="mini-copy"><strong>Shay &amp; Zay <span>Pixel Fun</span></strong><small>Creative studio</small></span></div>
+        <div className="mini-brand"><Logo/><span className="mini-copy"><strong>Shay &amp; Zay <span>PlayLab</span></strong><small>Creative studio</small></span></div>
         <div className="progress"><span><b>{progress}%</b> {progress === 100 ? "Amazing!" : "Keep colouring!"}</span><i><b style={{ width: `${progress}%` }}/></i></div>
         <button className={`save-game ${currentSaveId ? "saved" : ""}`} onClick={() => saveProgress()}><b>{currentSaveId ? "✓" : "↓"}</b><span>{currentSaveId ? "Saved game" : "Save progress"}</span></button>
         <button className="new" onClick={() => openPicker(camera.current)}>📷 <span>New photo</span></button>
