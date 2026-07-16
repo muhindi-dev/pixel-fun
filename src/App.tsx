@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 
 type RGB = [number, number, number];
@@ -62,6 +62,12 @@ function distance(a: Lab, b: Lab) {
 
 function hex(rgb: RGB) {
   return `#${rgb.map((n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function blendHex(first: string, second: string, secondRatio: number) {
+  const parse = (colour: string) => [1, 3, 5].map((start) => Number.parseInt(colour.slice(start, start + 2), 16));
+  const a = parse(first); const b = parse(second);
+  return `rgb(${a.map((value, index) => Math.round(value * (1 - secondRatio) + b[index] * secondRatio)).join(",")})`;
 }
 
 function rgbToLab([r, g, b]: RGB): Lab {
@@ -181,37 +187,17 @@ function Logo() {
   return <span className="logo" aria-hidden="true"><img src="./comet-icon-192.png" alt="" /></span>;
 }
 
-type PixelCellProps = {
-  index: number;
-  number: number;
-  colour: string;
-  filled: boolean;
-  target: boolean;
-  activate: (index: number) => void;
-};
-
-const PixelCell = memo(function PixelCell({ index, number, colour, filled, target, activate }: PixelCellProps) {
-  return <button
-    data-pixel={index}
-    className={`${filled ? "filled" : ""} ${target ? "target" : ""}`}
-    style={{ "--cell": colour } as CSSProperties}
-    onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") activate(index); }}
-    aria-label={`Pixel number ${number}`}
-  >{filled ? "" : number}</button>;
-});
-
 export default function Home() {
   const camera = useRef<HTMLInputElement>(null);
   const photos = useRef<HTMLInputElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
-  const grid = useRef<HTMLDivElement>(null);
+  const grid = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const lastCell = useRef(-1);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const zoomRef = useRef(1);
   const pinch = useRef<{ distance: number; zoom: number; x: number; y: number } | null>(null);
   const paintRect = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
-  const colourCellRef = useRef<(index: number) => void>(() => {});
   const filledRef = useRef<boolean[]>([]);
   const filledCountRef = useRef(0);
   const remainingCountRef = useRef<number[]>([]);
@@ -233,6 +219,67 @@ export default function Home() {
   const [currentSaveId, setCurrentSaveId] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState("");
 
+  function canvasBoard() {
+    if (!game || !grid.current) return null;
+    const logicalSize = fitSize;
+    const pixelRatio = Math.min(2, window.devicePixelRatio || 1);
+    const backingSize = Math.max(1, Math.round(logicalSize * pixelRatio));
+    if (grid.current.width !== backingSize || grid.current.height !== backingSize) {
+      grid.current.width = backingSize;
+      grid.current.height = backingSize;
+    }
+    const context = grid.current.getContext("2d", { alpha: false });
+    if (!context) return null;
+    const scale = backingSize / logicalSize;
+    context.setTransform(scale, 0, 0, scale, 0, 0);
+    context.imageSmoothingEnabled = false;
+    return { context, logicalSize, unit: logicalSize / game.size, lineWidth: 1 / scale };
+  }
+
+  function paintCanvasCell(index: number, wrong = false, redrawGrid = true, prepared?: NonNullable<ReturnType<typeof canvasBoard>>) {
+    if (!game) return;
+    const board = prepared ?? canvasBoard();
+    if (!board) return;
+    const { context, unit, lineWidth } = board;
+    const row = Math.floor(index / game.size); const column = index % game.size;
+    const x = column * unit; const y = row * unit;
+    const colourIndex = game.cells[index]; const colour = game.colours[colourIndex];
+    const isFilled = filledRef.current[index]; const isTarget = !isFilled && colourIndex === selected;
+    context.fillStyle = wrong ? "#ffc6c6" : isFilled ? colour : isTarget ? blendHex(colour, "#ffffff", .52) : "#ffffff";
+    context.fillRect(x, y, unit + lineWidth, unit + lineWidth);
+    if (!isFilled) {
+      context.fillStyle = isTarget ? "#050d2e" : "#626b84";
+      context.font = `${isTarget ? 900 : 800} ${Math.max(5, Math.min(21, unit * .54))}px ui-rounded, system-ui, sans-serif`;
+      context.textAlign = "center"; context.textBaseline = "middle";
+      context.fillText(String(colourIndex + 1), x + unit / 2, y + unit / 2 + unit * .035);
+      if (isTarget && !wrong) {
+        context.strokeStyle = blendHex(colour, "#101b4c", .28);
+        context.lineWidth = Math.max(lineWidth, 1.25 / (grid.current!.width / fitSize));
+        context.strokeRect(x + context.lineWidth / 2, y + context.lineWidth / 2, unit - context.lineWidth, unit - context.lineWidth);
+      }
+    }
+    if (redrawGrid) {
+      context.strokeStyle = "#d4d8e4"; context.lineWidth = lineWidth;
+      context.strokeRect(x + lineWidth / 2, y + lineWidth / 2, unit - lineWidth, unit - lineWidth);
+    }
+  }
+
+  function drawCanvasBoard() {
+    if (!game) return;
+    const board = canvasBoard();
+    if (!board) return;
+    const { context, logicalSize, unit, lineWidth } = board;
+    context.fillStyle = "#ffffff"; context.fillRect(0, 0, logicalSize, logicalSize);
+    game.cells.forEach((_, index) => paintCanvasCell(index, false, false, board));
+    context.beginPath();
+    for (let line = 0; line <= game.size; line += 1) {
+      const position = line * unit;
+      context.moveTo(position, 0); context.lineTo(position, logicalSize);
+      context.moveTo(0, position); context.lineTo(logicalSize, position);
+    }
+    context.strokeStyle = "#d4d8e4"; context.lineWidth = lineWidth; context.stroke();
+  }
+
   useEffect(() => {
     if (!game || !viewport.current) return;
     const element = viewport.current;
@@ -243,21 +290,15 @@ export default function Home() {
     return () => observer.disconnect();
   }, [game]);
 
+  useEffect(() => {
+    drawCanvasBoard();
+  }, [fitSize, game, selected]);
+
   useEffect(() => () => {
     if (filledSyncTimer.current !== null) window.clearTimeout(filledSyncTimer.current);
     if (saveNoticeTimer.current !== null) window.clearTimeout(saveNoticeTimer.current);
   }, []);
 
-  const activateCell = useCallback((index: number) => colourCellRef.current(index), []);
-  const gridCells = useMemo(() => game ? game.cells.map((colour, index) => <PixelCell
-    key={index}
-    index={index}
-    number={colour + 1}
-    colour={game.colours[colour]}
-    filled={filledRef.current[index]}
-    target={!filledRef.current[index] && colour === selected}
-    activate={activateCell}
-  />) : [], [activateCell, game, selected]);
   const progress = game ? Math.round(paintStats.done / game.cells.length * 100) : 0;
   const remaining = paintStats.remaining;
 
@@ -434,12 +475,8 @@ export default function Home() {
     const changed = matching.filter((cell) => !filledRef.current[cell]);
     if (!matching.length) {
       if (!showWrong) return;
-      const button = grid.current?.children.item(index) as HTMLButtonElement | null;
-      if (button) {
-        button.classList.remove("wrong");
-        window.requestAnimationFrame(() => button.classList.add("wrong"));
-        window.setTimeout(() => button.classList.remove("wrong"), 220);
-      }
+      paintCanvasCell(index, true);
+      window.setTimeout(() => { if (!filledRef.current[index]) paintCanvasCell(index); }, 180);
       return;
     }
     if (!changed.length) return;
@@ -447,12 +484,7 @@ export default function Home() {
       filledRef.current[cell] = true;
       filledCountRef.current += 1;
       remainingCountRef.current[selected] -= 1;
-      const button = grid.current?.children.item(cell) as HTMLButtonElement | null;
-      if (button) {
-        button.classList.remove("target", "wrong");
-        button.classList.add("filled");
-        button.textContent = "";
-      }
+      paintCanvasCell(cell);
     });
     const colourFinished = remainingCountRef.current[selected] === 0;
     const pictureFinished = filledCountRef.current === game.cells.length;
@@ -464,7 +496,6 @@ export default function Home() {
     }
     if (pictureFinished) window.setTimeout(() => setCelebrate(true), 180);
   }
-  colourCellRef.current = colourCell;
 
   function paintToCell(index: number) {
     if (!game || index === lastCell.current) return;
@@ -524,7 +555,7 @@ export default function Home() {
     drawing.current = false;
   }
 
-  function pointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+  function pointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     event.currentTarget.setPointerCapture(event.pointerId);
     if (pointers.current.size === 1) {
@@ -533,7 +564,7 @@ export default function Home() {
     } else beginPinch();
   }
 
-  function pointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+  function pointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
     if (!pointers.current.has(event.pointerId)) return;
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.current.size >= 2) {
@@ -552,7 +583,7 @@ export default function Home() {
     } else if (drawing.current) pointToCell(event.clientX, event.clientY);
   }
 
-  function pointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
+  function pointerEnd(event: ReactPointerEvent<HTMLCanvasElement>) {
     pointers.current.delete(event.pointerId);
     if (pointers.current.size < 2) pinch.current = null;
     if (pointers.current.size === 0) { drawing.current = false; lastCell.current = -1; paintRect.current = null; }
@@ -642,13 +673,13 @@ export default function Home() {
             <div className="brush-control"><span>🖌️ Brush</span>{[1, 3, 5].map((size) => <button key={size} className={brushSize === size ? "active" : ""} onClick={() => setBrushSize(size)}>{size}×</button>)}</div>
             <div className="zoom-control"><button className="fit" disabled={zoom === 1} onClick={fitBoard}>Fit</button><button disabled={zoom <= 1} onClick={() => setBoardZoom(zoom - .5)}>−</button><span>{Math.round(zoom * 100)}%</span><button disabled={zoom >= 5} onClick={() => setBoardZoom(zoom + .5)}>+</button></div>
           </div>
-          <div ref={viewport} className="grid-scroll"><span className="gesture-hint">Drag to colour · Pinch to explore</span><div ref={grid} className="pixel-grid" style={{ "--size": game.size, width: fitSize * zoom, height: fitSize * zoom, minWidth: fitSize * zoom, minHeight: fitSize * zoom } as CSSProperties}
+          <div ref={viewport} className="grid-scroll"><span className="gesture-hint">Drag to colour · Pinch to explore</span><canvas ref={grid} className="pixel-canvas" style={{ width: fitSize * zoom, height: fitSize * zoom, minWidth: fitSize * zoom, minHeight: fitSize * zoom }}
+            role="img"
+            aria-label={`Colour-by-number board with ${game.size * game.size} pixels`}
             onPointerDown={pointerDown}
             onPointerMove={pointerMove}
             onPointerUp={pointerEnd}
-            onPointerCancel={pointerEnd}>
-            {gridCells}
-          </div></div>
+            onPointerCancel={pointerEnd}/></div>
         </div>
       </section>
     </div>}

@@ -292,11 +292,7 @@ button:focus-visible { outline:4px solid var(--cyan); outline-offset:3px; }
 .zoom-control span { min-width:48px; text-align:center; font-size:11px; font-weight:850; }
 .grid-scroll { flex:1; min-height:0; overflow:auto; display:flex; place-items:initial; position:relative; border-radius:20px; background:linear-gradient(145deg,#edf8ff,#f0efff); overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
 .gesture-hint { position:absolute; z-index:4; left:50%; top:10px; min-width:max-content; padding:7px 11px; border:1px solid rgba(255,255,255,.13); border-radius:99px; color:white; background:rgba(17,20,56,.72); backdrop-filter:blur(10px); font-size:10px; font-weight:800; transform:translateX(-50%); pointer-events:none; animation:hintVisit 6s ease both; }
-.pixel-grid { margin:auto; flex:0 0 auto; display:grid; grid-template:repeat(var(--size),1fr)/repeat(var(--size),1fr); border:5px solid var(--ink); border-radius:11px; overflow:hidden; background:white; touch-action:none; box-shadow:0 10px 26px rgba(21,32,82,.2); }
-.pixel-grid button { min-width:0; min-height:0; padding:0; border:0; border-right:1px solid #d4d8e4; border-bottom:1px solid #d4d8e4; background:white; color:#626b84; font-size:clamp(6px,calc(34vw/var(--size)),21px); font-weight:850; user-select:none; contain:paint; -webkit-tap-highlight-color:transparent; }
-.pixel-grid button.target { background:color-mix(in srgb,var(--cell) 48%,white); color:#050d2e; font-weight:1000; box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--cell) 72%,#101b4c); }
-.pixel-grid button.filled { background:var(--cell); color:transparent; }
-.pixel-grid button.wrong { background:#ffc6c6; animation:wrong .22s; }
+.pixel-canvas { margin:auto; flex:0 0 auto; display:block; border:5px solid var(--ink); border-radius:11px; background:white; touch-action:none; box-shadow:0 10px 26px rgba(21,32,82,.2); user-select:none; -webkit-tap-highlight-color:transparent; }
 
 /* Keep every frame available for painting on older iPads. */
 .game,.game-head,.play aside,.board { animation:none; }
